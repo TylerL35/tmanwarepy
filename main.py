@@ -89,8 +89,6 @@ def main():
                 cv.putText(display_frame, f"Buffer: {len(dequeStorage)}/150", (10, 65), 
                            cv.FONT_HERSHEY_SIMPLEX, 0.8, buf_color, 2)
                 
-                cv.imshow('Safe MediaPipe Tracker', display_frame)
-
                 if len(tracked_indices) > 0:
                     frame_data = {}
                     nose = face[1]
@@ -106,6 +104,8 @@ def main():
                         cv.circle(display_frame, (int(lm.x * w), int(lm.y * h)), 2, (0, 255, 0), -1)
                     
                     dequeStorage.append(frame_data)
+
+            cv.imshow('Safe MediaPipe Tracker', display_frame)
 
             key = cv.waitKey(1) & 0xFF
             if key == 27: break
