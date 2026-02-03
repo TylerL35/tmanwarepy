@@ -8,21 +8,20 @@ from collections import deque
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python import BaseOptions
 
+# Configuration
 model_path = 'face_landmarker.task'
-
 LANDMARK_NAMES = [
     'nose', 'eyeCornerL', 'eyeCornerR', 'mouthCornerL', 'mouthCornerR', 'chin',
     'eyelidLTop', 'eyelidLBot', 'eyelidRTop', 'eyelidRBot', 'browL', 'browR',
     'lipMidTop', 'lipMidBot'
 ]
 
-# Robust Fieldnames
 FIELDNAMES = []
 for name in LANDMARK_NAMES:
     FIELDNAMES.extend([f"{name}_x", f"{name}_y", f"{name}_z"])
-FIELDNAMES.extend(['target_gesture', 'session_id', 'user_id']) # Added user_id
+FIELDNAMES.extend(['target_gesture', 'session_id', 'user_id'])
 
-def save_to_csv(dS, l, u_id="me"):
+def save_to_csv(dS, l, u_id):
     filename = 'test_case.csv'
     file_exists = os.path.isfile(filename)
     session_id = int(time.time())
@@ -33,14 +32,13 @@ def save_to_csv(dS, l, u_id="me"):
             writer.writeheader()
         
         for row in dS:
-            # COPY the row so we don't corrupt the live buffer
             row_to_write = row.copy()
             row_to_write['target_gesture'] = l
             row_to_write['session_id'] = session_id
             row_to_write['user_id'] = u_id
             writer.writerow(row_to_write)
             
-    print(f"✅ Appended 150 frames: {l} (User: {u_id})")
+    print(f"Appended 150 frames: {l} (User: {u_id})")
 
 def main():
     options = vision.FaceLandmarkerOptions(
@@ -54,6 +52,8 @@ def main():
     dequeStorage = deque(maxlen=150)
     label = 'neutral'
     user_id = 'me'
+
+    print("Hot keys: \n\tESC - quit\n\tr - init landmarks\n\t0 - neutral\n\t1 - smile\n\t2 - frown\n\t3 - blink\n\t4 - leftWink\n\t5 - rightWink\n\to - SAVE 150 frames")
 
     with vision.FaceLandmarker.create_from_options(options) as landmarker:
         while cap.isOpened():
@@ -71,11 +71,25 @@ def main():
             if result.face_landmarks:
                 face = result.face_landmarks[0]
                 
-                # SENSITIVITY MONITOR (EAR)
-                # Helps you stay wide-eyed for Neutral recording
-                ear = abs(face[159].y - face[145].y)
-                cv.putText(display_frame, f"Eye Openness: {ear:.4f}", (10, h-20), 
-                           cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                # Eye distance logic
+                eye_top = face[159]
+                eye_bot = face[145]
+                ear = abs(eye_top.y - eye_bot.y)
+
+                # 1. DRAW BACKGROUND BOXES FOR READABILITY
+                cv.rectangle(display_frame, (0, 0), (300, 110), (0, 0, 0), -1) # Top left box
+
+                # 2. DRAW STATUS TEXT
+                # Current Gesture Label
+                cv.putText(display_frame, f"Gesture: {label.upper()}", (10, 30), 
+                           cv.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
+                
+                # Buffer Status (Red if filling, Green if full)
+                buf_color = (0, 255, 0) if len(dequeStorage) == 150 else (0, 0, 255)
+                cv.putText(display_frame, f"Buffer: {len(dequeStorage)}/150", (10, 65), 
+                           cv.FONT_HERSHEY_SIMPLEX, 0.8, buf_color, 2)
+                
+                cv.imshow('Safe MediaPipe Tracker', display_frame)
 
                 if len(tracked_indices) > 0:
                     frame_data = {}
@@ -86,33 +100,28 @@ def main():
 
                     for i, idx in enumerate(tracked_indices):
                         lm = face[idx]
-                        # Relative + Scaled Math
                         frame_data[f"{LANDMARK_NAMES[i]}_x"] = (lm.x - nose.x) / dist
                         frame_data[f"{LANDMARK_NAMES[i]}_y"] = (lm.y - nose.y) / dist
                         frame_data[f"{LANDMARK_NAMES[i]}_z"] = (lm.z - nose.z) / dist
-                        
                         cv.circle(display_frame, (int(lm.x * w), int(lm.y * h)), 2, (0, 255, 0), -1)
                     
                     dequeStorage.append(frame_data)
-
-            # Buffer Status UI
-            color = (0, 255, 0) if len(dequeStorage) == 150 else (0, 0, 255)
-            cv.putText(display_frame, f"Buffer: {len(dequeStorage)}/150", (10, 30), 
-                       cv.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-
-            cv.imshow('Safe MediaPipe Tracker', display_frame)
 
             key = cv.waitKey(1) & 0xFF
             if key == 27: break
             elif key == ord('r'):
                 tracked_indices = [1, 33, 263, 61, 291, 152, 159, 145, 386, 374, 55, 285, 13, 14]
-            elif key == ord('0'): label = 'neutral'
-            elif key == ord('1'): label = 'smile'
+            elif key == ord('0'): label = 'neutral'; print("Target: neutral")
+            elif key == ord('1'): label = 'smile'; print("Target: smile")
+            elif key == ord('2'): label = 'frown'; print("Target: frown")
+            elif key == ord('3'): label = 'blink'; print("Target: blink")
+            elif key == ord('4'): label = 'leftWink'; print("Target: leftWink")
+            elif key == ord('5'): label = 'rightWink'; print("Target: rightWink")
             elif key == ord('o'):
                 if len(dequeStorage) == 150:
                     save_to_csv(dequeStorage, label, user_id)
                 else:
-                    print("⚠️ Wait for buffer to fill!")
+                    print(f"⚠️ Buffer only at {len(dequeStorage)}/150")
 
     cap.release()
     cv.destroyAllWindows()
