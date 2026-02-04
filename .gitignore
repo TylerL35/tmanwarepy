@@ -1,0 +1,23 @@
+# Python environment
+venv/
+env/
+__pycache__/
+*.pyc
+
+# Data (Crucial for file size)
+*.csv
+*.npy
+*.pickle
+
+# Models (Can get very large)
+*.h5
+*.keras
+*.tflite
+*.task
+
+# Mac system files
+.DS_Store
+
+# Logs and Checkpoints
+logs/
+checkpoints/

@@ -1,9 +1,9 @@
+import os
 import cv2 as cv
 import mediapipe as mp
 import time
 import numpy as np
 import csv
-import os
 from collections import deque
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python import BaseOptions
