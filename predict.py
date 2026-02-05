@@ -65,10 +65,27 @@ while cap.isOpened():
         confidence = prediction[0][class_idx]
         gesture = class_names[class_idx]
 
-        # UI
+        # --- UI WITH BLACK BACKGROUND & BOLD TEXT ---
+        text = f"{gesture.upper()} {confidence*100:.1f}%"
+        font = cv.FONT_HERSHEY_SIMPLEX
+        font_scale = 1
+        thickness = 3  # Increased thickness for a bold look
+        pos = (20, 50)
+        
+        # 1. Calculate the background box size based on the text
+        (text_w, text_h), baseline = cv.getTextSize(text, font, font_scale, thickness)
+        
+        # 2. Draw the black rectangle (the background)
+        # We add 10px padding for a professional "label" look
+        cv.rectangle(frame, 
+                     (pos[0] - 10, pos[1] - text_h - 10), 
+                     (pos[0] + text_w + 10, pos[1] + baseline + 10), 
+                     (0, 0, 0), 
+                     -1) # -1 fills the box
+        
+        # 3. Draw the bold text on top
         color = (0, 255, 0) if gesture == 'smile' else (255, 255, 255)
-        cv.putText(frame, f"{gesture.upper()} {confidence*100:.1f}%", 
-                   (20, 50), cv.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        cv.putText(frame, text, pos, font, font_scale, color, thickness)
 
     cv.imshow('MediaPipe Tasks Prediction', frame)
     if cv.waitKey(1) & 0xFF == 27: break
