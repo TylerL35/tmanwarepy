@@ -84,7 +84,12 @@ while cap.isOpened():
                      -1) # -1 fills the box
         
         # 3. Draw the bold text on top
-        color = (0, 255, 0) if gesture == 'smile' else (255, 255, 255)
+        if gesture == 'smile':
+            color = (0, 255, 0) 
+        elif gesture == 'frown':
+            color = (0, 0, 255)
+        else: 
+            color = (255, 255, 255)
         cv.putText(frame, text, pos, font, font_scale, color, thickness)
 
     cv.imshow('MediaPipe Tasks Prediction', frame)
